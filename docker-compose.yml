@@ -1,32 +1,41 @@
+# docker-compose.yml
+# This file orchestrates the multi-container Docker application.
+# Run `docker-compose up --build` from the root directory to start.
+
 version: '3.8'
 
 services:
+  # The Python backend service
   backend:
     build:
       context: .
       dockerfile: DOCKERFILE
+    container_name: duckdb_backend
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      # Mount the backend code for hot-reloading during development
+      - ./backend/app:/app/app
+      # Mount the local data directory into the container
+      - ./data:/app/data
     ports:
       - "8000:8000"
-    volumes:
-      - ./backend:/app
-      - ./data:/data
     environment:
-      - PYTHONPATH=/app
-    depends_on: []
+      # Set the directory where the app will look for data
+      - PARQUET_DATA_DIR=/app/data
+    restart: unless-stopped
 
+  # The React frontend service
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+    container_name: duckdb_frontend
     ports:
-      - "3000:3000"
-    volumes:
-      - ./frontend/src:/app/src
-      - ./frontend/public:/app/public
+      # The frontend is accessible on http://localhost:3000
+      - "3000:80"
+    depends_on:
+      - backend # Ensures backend starts before the frontend
+    restart: unless-stopped
     environment:
       - REACT_APP_API_URL=http://localhost:8000
-    depends_on:
-      - backend
 
-volumes:
-  node_modules:

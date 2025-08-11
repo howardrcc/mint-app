@@ -1,37 +1,43 @@
+# Development docker-compose with hot reloading
+# Run with: docker-compose -f docker-compose.dev.yml up --build
+
 version: '3.8'
 
 services:
-  devcontainer:
-    build:
-      context: .devcontainer
-      dockerfile: Dockerfile
-    volumes:
-      - ..:/workspace:cached
-      - /var/run/docker.sock:/var/run/docker-host.sock
-    command: sleep infinity
-    environment:
-      - DOCKER_HOST=unix:///var/run/docker-host.sock
-
+  # The Python backend service (same as production)
   backend:
     build:
       context: .
       dockerfile: DOCKERFILE
+    container_name: duckdb_backend_dev
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      # Mount the backend code for hot-reloading during development
+      - ./backend/app:/app/app
+      # Mount the local data directory into the container
+      - ./data:/app/data
     ports:
       - "8000:8000"
-    volumes:
-      - ./backend:/app
-      - ./data:/data
     environment:
-      - PYTHONPATH=/app
+      - PARQUET_DATA_DIR=/app/data
+    restart: unless-stopped
 
+  # The React frontend service (development mode)
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile
-    ports:
-      - "3000:3000"
+      dockerfile: Dockerfile.dev
+    container_name: duckdb_frontend_dev
     volumes:
       - ./frontend/src:/app/src
       - ./frontend/public:/app/public
+      - /app/node_modules  # Anonymous volume for node_modules
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
     environment:
       - REACT_APP_API_URL=http://localhost:8000
+      - CHOKIDAR_USEPOLLING=true  # For Windows file watching
+    stdin_open: true  # Keep stdin open
+    tty: true         # Allocate a pseudo-TTY
