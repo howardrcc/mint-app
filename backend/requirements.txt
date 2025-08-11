@@ -1,0 +1,21 @@
+# Server
+fastapi
+uvicorn[standard]
+
+# Data Processing
+duckdb
+pyarrow
+pandas
+
+# Excel Export
+xlsxwriter
+
+# Performance Benchmarking
+psutil
+memory-profiler
+
+# HTTP Client
+httpx
+
+# Environment Variables
+python-dotenv
